@@ -11,33 +11,7 @@
   NSLog(@"SignInWithApple initialize");
 }
 
-- (NSArray<ASAuthorizationScope> *)convertScopes: (NSArray<NSNumber *> *)scopes
-{
-  NSMutableArray<ASAuthorizationScope> *convertedScopes = [NSMutableArray array];
-
-  for (NSNumber *scope in scopes) {
-    ASAuthorizationScope convertedScope = [self convertScope:scope];
-    if (convertedScope != nil) {
-      [convertedScopes addObject:convertedScope];
-    }
-  }
-
-  return convertedScopes;
-}
-- (ASAuthorizationScope)convertScope: (NSNumber *)scope
-{
-  switch (scope.integerValue) {
-    case 0:
-      return ASAuthorizationScopeFullName;
-    case 1:
-      return ASAuthorizationScopeEmail;
-    default:
-      return nil;
-  }
-}
-
 - (void)signin:(CDVInvokedUrlCommand *)command {
-  NSDictionary *options = command.arguments[0];
   NSLog(@"SignInWithApple signin()");
 
   if (@available(iOS 13, *)) {
@@ -46,10 +20,13 @@
     ASAuthorizationAppleIDProvider *provider =
         [[ASAuthorizationAppleIDProvider alloc] init];
     ASAuthorizationAppleIDRequest *request = [provider createRequest];
+    [request setRequestedScopes:@[
+      ASAuthorizationScopeFullName, ASAuthorizationScopeEmail
+    ]];
 
-    if (options[@"requestedScopes"]) {
-        request.requestedScopes = [self convertScopes:options[@"requestedScopes"]];
-    }
+    [request setRequestedScopes:@[
+      ASAuthorizationScopeFullName, ASAuthorizationScopeEmail
+    ]];
 
     ASAuthorizationController *controller = [[ASAuthorizationController alloc]
         initWithAuthorizationRequests:@[ request ]];
@@ -133,6 +110,7 @@
   NSString *identityToken =
       [[NSString alloc] initWithData:appleIDCredential.identityToken
                             encoding:NSUTF8StringEncoding];
+
   NSString *authorizationCode =
       [[NSString alloc] initWithData:appleIDCredential.authorizationCode
                             encoding:NSUTF8StringEncoding];
@@ -141,8 +119,8 @@
     @"state" : appleIDCredential.state ? appleIDCredential.state : @"",
     @"fullName" : fullName ? fullName : @{},
     @"email" : appleIDCredential.email ? appleIDCredential.email : @"",
-    @"identityToken" : identityToken,
-    @"authorizationCode" : authorizationCode
+    @"authorizationCode": authorizationCode,
+    @"identityToken" : identityToken
   };
 
   CDVPluginResult *result =
